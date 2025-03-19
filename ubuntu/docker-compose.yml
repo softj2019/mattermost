@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  mattermost:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8065:8065"  # Mattermost 웹 인터페이스
+    volumes:
+      - mattermost_data:/opt/mattermost/data
+      - mattermost_logs:/opt/mattermost/logs
+    environment:
+      MM_SERVICESETTINGS_DEFAULTCLIENTLOCALE: ko
+      MM_SQLSETTINGS_DATASOURCE: "postgres://mmuser:mostest@db:5432/mattermost?sslmode=disable"
+    depends_on:
+      - db
+
+  db:
+    image: postgres:13
+    restart: always
+    environment:
+      POSTGRES_USER: mmuser
+      POSTGRES_PASSWORD: mostest
+      POSTGRES_DB: mattermost
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  gitlab:
+    build:
+      context: .
+      dockerfile: Dockerfile.gitlab
+    ports:
+      - "8099:80"    # GitLab HTTP
+      - "4443:443"   # GitLab HTTPS
+      - "2222:22"    # GitLab SSH
+      - "9001:9001"  # Supervisor 관리 포트
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'http://localhost:8099'
+        nginx['listen_port'] = 8099
+        nginx['listen_https'] = 4443
+    volumes:
+      - gitlab_data:/etc/gitlab
+      - gitlab_logs:/var/log/gitlab
+      - gitlab_data_files:/var/opt/gitlab
+    depends_on:
+      - db_gitlab
+  db_gitlab:
+    image: postgres:13
+    restart: always
+    environment:
+      POSTGRES_USER: gitlab_user
+      POSTGRES_PASSWORD: gitlab_password
+      POSTGRES_DB: gitlabhq_production
+    volumes:
+      - gitlab_db_data:/var/lib/postgresql/data
+volumes:
+  mattermost_data:
+  mattermost_logs:
+  db_data:
+  gitlab_data:
+  gitlab_logs:
+  gitlab_data_files:
+  gitlab_db_data:

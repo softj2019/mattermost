@@ -1,0 +1,33 @@
+# Ubuntu Jammy 22.04 LTS 기반
+FROM ubuntu:22.04
+
+# 환경 변수 설정
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 필수 패키지 설치
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    gnupg \
+    software-properties-common \
+    apt-transport-https \
+    ca-certificates \
+    openssh-server \
+    supervisor \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# GitLab 설치
+RUN curl -fsSL https://packages.gitlab.com/install/repositories/gitlab/gitlab-ce/script.deb.sh | bash && \
+    apt-get install -y gitlab-ce
+
+COPY ./supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+# 데이터 및 로그 디렉토리 생성
+VOLUME /etc/gitlab
+VOLUME /var/log/gitlab
+VOLUME /var/opt/gitlab
+
+# 포트 노출
+EXPOSE 80 443 22 9001
+
+# GitLab 초기 설정을 위한 스크립트 실행 및 supervisor 시작
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

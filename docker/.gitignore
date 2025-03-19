@@ -1,0 +1,5 @@
+volumes
+data
+certs
+.env
+.idea
